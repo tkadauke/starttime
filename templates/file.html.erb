@@ -1,0 +1,15 @@
+<% if file.children.empty? %>
+  <%= file.name.gsub(Dir.pwd, '$PWD') %> (<%= (file.duration * 1000).to_i %> ms)
+<% else %>
+  <a href='#'><%= file.name.gsub(Dir.pwd, '$PWD') %></a>
+  <% if file.duration %>
+    (total <%= (file.duration * 1000).to_i %> ms, own <%= (file.own_time * 1000).to_i %> ms)
+  <% end %>
+  <ul style='display:none'>
+  <% file.children_sorted_by_duration.each do |child| %>
+    <li>
+      <%= render "#{TEMPLATE_PATH}/file.html.erb", :file => child %>
+    </li>
+  <% end %>
+  </ul>
+<% end %>

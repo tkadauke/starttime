@@ -1,0 +1,51 @@
+== Starttime - Inspect start up time
+
+This gem includes an executable Ruby script that lets you inspect how long it takes to require each file on start up of your Ruby application.
+
+== Usage
+
+  Usage: starttime [options] file(s)
+    -r, --rails                      Profile environment time for a Rails project. Implies config/environment as a file to require
+    -o, --output=FILENAME            Output to FILENAME. Default is STDOUT.
+    -f, --format=FORMAT              Choose output format. Available are html and flat.
+
+== Examples
+
+To inspect the start up of a Rails application, use starttime in your RAILS_ROOT like this:
+
+  starttime --rails _or_ starttime -r _or_ starttime config/environment
+
+For HTML output, use the <code>-f</code> option:
+
+  starttime --format html config/environment
+
+To require multiple files, just specify them at the end of the command line, like this:
+
+  starttime config/environment app/models/user
+
+You can also use that to e.g. first load rails and then your environment (useful when you want to find out how much is rails and how much is your app):
+
+  starttime config/boot activesupport activerecord actionmailer config/environment
+
+Lastly, you can specify an output file like this:
+
+  starttime -r --output startup
+
+== Example output
+
+The following contains parts of the output of <code>starttime -f html -r</code> the RAILS_ROOT of TinyCI (http://github.com/tkadauke/tiny_ci):
+
+  starttime
+    config/environment (total 1853 ms, own 376 ms)
+      active_record (total 329 ms, own 1 ms)
+        active_support (total 327 ms, own 1 ms)
+        active_record/i18n_interpolation_deprecation (total 1 ms, own 0 ms)
+      net/ssh (total 310 ms, own 6 ms)
+      authlogic (total 167 ms, own 37 ms)
+      action_mailer (total 106 ms, own 3 ms)
+        action_mailer/vendor/tmail (total 102 ms, own 2 ms)
+        action_controller (0 ms)
+        action_view (0 ms)
+      active_record/connection_adapters/abstract_adapter (total 65 ms, own 7 ms)
+      uri (total 60 ms, own 36 ms)
+      rack/utils (total 60 ms, own 3 ms)

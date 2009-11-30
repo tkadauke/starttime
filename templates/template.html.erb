@@ -1,0 +1,27 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="de" lang="de">
+  <head>
+    <style>
+      .report ul li { list-style: none; padding: 2px 0 2px 20px; text-indent: -19px; background-position: 9px 0; }
+      .report ul li > * { text-indent: 0px; }
+    </style>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/prototype/1.6.0.3/prototype.js"></script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/scriptaculous/1.8.3/scriptaculous.js"></script>
+    <script>
+      $(document).observe('dom:loaded', function() {
+        $('report').getElementsBySelector('a').each(function(link) {
+          link.observe('click', function(event) {
+            Effect.toggle(link.up().down('ul'), 'blind', { duration: 0.3 });
+            event.stop();
+          });
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <div id="report" class="report">
+      <%= render "#{TEMPLATE_PATH}/file.html.erb", :file => @file %>
+    </div>
+  </body>
+</html>

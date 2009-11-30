@@ -1,0 +1,157 @@
+#!/usr/bin/env ruby
+require 'optparse'
+require 'erb'
+
+options = {
+  :output_format => 'flat'
+}
+files = []
+
+opts = OptionParser.new do |opts|
+  opts.banner = "Usage: starttime [options] file(s)"
+  
+  opts.on "-r", "--rails", "Profile environment time for a Rails project. Implies config/environment as a file to require" do
+    files << 'config/environment'
+  end
+  
+  opts.on "-o", "--output=FILENAME", "Output to FILENAME. Default is STDOUT." do |filename|
+    options[:output_file] = filename
+  end
+  
+  opts.on "-f", "--format=FORMAT", "Choose output format. Available are html and flat." do |format|
+    options[:output_format] = format
+  end
+end
+
+opts.parse!(ARGV)
+
+files += ARGV unless ARGV.empty?
+
+if files.empty?
+  puts opts.help
+  exit
+end
+
+class SourceFile
+  attr_accessor :name, :duration
+  
+  def initialize(name)
+    @name = name
+  end
+  
+  def children
+    @children ||= []
+  end
+  
+  def children_sorted_by_duration
+    children.sort_by { |c| c.duration }.reverse
+  end
+  
+  def own_time
+    duration - children.collect { |c| c.duration }.sum rescue 0
+  end
+
+  class BasePrinter
+    def initialize(file, output)
+      @file = file
+      @output = output
+    end
+  end
+  
+  class FlatPrinter < BasePrinter
+    def print
+      print_with_indent(0, @file)
+    end
+  
+    def print_with_indent(num, file)
+      @output.puts((" " * num) + "#{file.name} (#{file.duration})")
+      file.children_sorted_by_duration.each do |child|
+        print_with_indent(num + 2, child)
+      end
+    end
+  end
+  
+  class HTMLPrinter < BasePrinter
+    TEMPLATE_PATH = File.dirname(__FILE__) + '/../templates'
+    
+    def print
+      @output.puts render("#{TEMPLATE_PATH}/template.html.erb")
+    end
+    
+    def render(filename, vars = {})
+      b = binding
+      vars.each do |name, var|
+        eval("#{name}=vars[:#{name}]", b)
+      end
+      ERB.new(File.read(filename)).result(b)
+    end
+  end
+end
+
+$current_source_file = SourceFile.new(__FILE__)
+
+module Kernel
+  def require_with_benchmark(*args)
+    old_source_file = $current_source_file
+  
+    file_name = args.first
+  
+    $current_source_file = current_source_file = SourceFile.new(file_name)
+  
+    before = Time.now.to_f
+    result = require_without_benchmark(*args)
+  ensure
+    after = Time.now.to_f
+  
+    current_source_file.duration = after - before
+    old_source_file.children << current_source_file
+    
+    $current_source_file = old_source_file
+  
+    result
+  end
+
+  alias require_without_benchmark require
+  alias require require_with_benchmark
+  
+  def load_with_benchmark(*args)
+    old_source_file = $current_source_file
+  
+    file_name = args.first
+  
+    $current_source_file = current_source_file = SourceFile.new(file_name)
+  
+    before = Time.now.to_f
+    result = load_without_benchmark(*args)
+  ensure
+    after = Time.now.to_f
+  
+    current_source_file.duration = after - before
+    old_source_file.children << current_source_file
+    
+    $current_source_file = old_source_file
+    result
+  end
+  
+  alias load_without_benchmark load
+  alias load load_with_benchmark
+end
+
+files.each do |file|
+  require file
+end
+
+output_stream = if options[:output_file]
+  File.open(options[:output_file], 'w')
+else
+  $stdout
+end
+
+case options[:output_format]
+when 'html'
+  SourceFile::HTMLPrinter.new($current_source_file, output_stream).print
+when 'flat'
+  SourceFile::FlatPrinter.new($current_source_file, output_stream).print
+end
+
+output_stream.close
