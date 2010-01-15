@@ -21,15 +21,21 @@ opts = OptionParser.new do |opts|
   opts.on "-f", "--format=FORMAT", "Choose output format. Available are html and flat." do |format|
     options[:output_format] = format
   end
+  
+  opts.on "-e", "--execute=COMMAND", "Execute a Ruby command" do |command|
+    options[:command] = command
+  end
 end
 
 opts.parse!(ARGV)
 
-files += ARGV unless ARGV.empty?
+unless options[:command]
+  files += ARGV unless ARGV.empty?
 
-if files.empty?
-  puts opts.help
-  exit
+  if files.empty?
+    puts opts.help
+    exit
+  end
 end
 
 class SourceFile
@@ -137,8 +143,12 @@ module Kernel
   alias load load_with_benchmark
 end
 
-files.each do |file|
-  require file
+if options[:command]
+  eval(options[:command])
+else
+  files.each do |file|
+    require file
+  end
 end
 
 output_stream = if options[:output_file]
